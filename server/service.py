@@ -1,10 +1,12 @@
+from logging import exception
 import psycopg2
 from entity.monitor import Monitor 
+from datetime import date, datetime
 # import Json
 class MonitorService:
     connection = None
     def __init__(self):
-        print("Khoi tao chua the !!!!!!!!!!!")
+        print("Khoi tao ")
         self.connection = psycopg2.connect(
                 host="localhost",
                 database="postgres",
@@ -57,10 +59,12 @@ class MonitorService:
             print("asca")
             cursor.execute(postgres_select_query,(email,))
             self.connection.commit()
-            data = cursor.fetchone()
+            data = cursor.fetchall()
+            if len(data) == 0 : 
+                return "error"
+            print("User nhan duoc khi truy van voi email la : ", data)
             print(type(data))
-            print(data)
-            return tuple(data)
+            return data[0]
     
         except (Exception, psycopg2.Error)  as error :
             print("Failed to insert record into mobile table", error)
@@ -72,29 +76,66 @@ class MonitorService:
             #     self.connection.close()
             #     print("Database connection os close successful") 
     def checkLogin(self, email, password):
-        print("troll very troll !")
-        # check user and password
         data = self.findUserByEmail(email)
+        print("Loai cua data tra ve la : ", type(data))
+        return data[2] == password[1:], "me"
+    def addWorkLog(self, data):
+        try:
+            sqlQuery = """INSERT INTO "worklog"("time", "employeeid", "monitorid", "userimage") VALUES(%s, %s, %s, %s)"""
+            cursor = self.connection.cursor()
+            print("flag1")
+            print(data)
+            cursor.execute(sqlQuery, tuple(data.values()))
+            print("flag2")
+            self.connection.commit()
+        except (Exception, psycopg2.Error) as error :
+            print("Failed to insert record into work log table", error)
+        finally : 
+            print("close success")
+            self.connection.close()
+    def check_spoof(self, imageBase64):
+        # check base on machine learning model 
+        # 1. Is this fake or real ?
+        # 2. Who is this ?
+        isFake = False
+        isWho = None 
+        return isFake, isWho
+    def check_and_add_work_log(self, auth, imageBase64):
+        email = auth['user']
+        isFake, who = self.check_spoof(imageBase64)
+        # neu la fake face 
+        # if worklog for to day does't not exist, create 1 more record 
+        isFake = False
+        who = "tran xuan luong"
+        if isFake:
+            return "face is fake"
+        elif who is None:
+            return "image doesn't match any person in the system"
+
+        success = 1
+        if isFake: success = 0
+        print("run to here")
+        try:
+            queryGetId = """ select id from employee where email = %s """
+            cursor = self.connection.cursor()
+            cursor.execute(queryGetId, (email,))
+            self.connection.commit()
+            idUser = cursor.fetchall()
+            print("after get user id ")
+            # create new worklog
+            insertLogQuery = """insert into worklog(employeeid, userimage, daywork, logtime, success) values (%s, %s, %s, %s, %s ) """
+            print("oh shit")
+            values = (idUser[0],imageBase64, date.today(),datetime.now(), success,)
+            print(values)
+            cursor.execute(insertLogQuery, values)
+            self.connection.commit()
+            print(idUser)
+        except (Exception, psycopg2.Error) as error :
+            print("Failed to insert record into work log table", error)
+        finally : 
+            print("close success")
+            self.connection.close()
         
-        print(type(data))
-        if data is None : 
-            print("true")
-        return True
-        # data = tuple(data)
-        # print(data[1])
-        # result = Monitor(tuple(data)) 
-        # result = None
-        # print(result.email)
-        # if result and result.password == password:
-        #     print("tlammmmmmmmmmmmmmmmmmmmmmmmmmmm")
-        #     return True
-        # else: return False
+        # if worklog for today exist, just add 5 minutes to time column
+        # select workLog for today of user with email auth['user]
 
-# class EmployeeService:
-#     pass
-
-# class WorkLogService:
-#     pass
-
-# ngu = MonitorService()
-# ngu.checkLogin("cc","as")

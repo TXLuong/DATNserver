@@ -2,14 +2,18 @@ import os.path
 import cv2
 from service import MonitorService
 import os
-from flask import Flask, request, render_template, send_from_directory, jsonify, make_response
+from flask import Flask, request, render_template, send_from_directory, jsonify, make_response, Response
 import jwt
 import datetime
 from flask_cors import CORS
 import base64
 from service import MonitorService 
+import json
 app = Flask(__name__)
 CORS(app, resources=r'/login')
+CORS(app, resources=r'/monitor/current')
+CORS(app, resources=r'/logout')
+CORS(app, resources=r'/turnIn')
 # CORS(app, resources=r'/getCurent')
 app.config['SECRET_KEY'] ='thisisthesecretkey'
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -67,20 +71,53 @@ def send_image(filename):
 
 @app.route('/login', methods = ['POST'])
 def login():
-    # auth = request.get_json()
-    # return "logined"
+    # de username va password trong header
     headers = request.headers.get("Authorization")
     transform = base64.b64decode(headers)
     res = transform.decode("UTF-8")
-    print("res ---------------- ", res)
     arr = res.split(":")
     auth = {"email" : arr[0], "password" : arr[1]}
-
-    if auth and service.checkLogin(auth['email'], auth['password']) :
+    check, userInfo = service.checkLogin(auth['email'], auth['password'])
+    if auth and check :
         # verify who user is 
-        token = jwt.encode({'user': auth['email'], 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=30)}, app.config['SECRET_KEY'])
-        return jsonify({'token': token})
-        print("token ------------------------- ", token)
+        token = jwt.encode({'user': auth['email'], 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=60*12)}, app.config['SECRET_KEY'])
+        return jsonify({"token": token.decode('UTF-8'),"userInfo" : userInfo})
     return make_response('Could not verify', 401, {'WWW-Authenticate' : 'Basic realm = "Login required "'})
+
+
+@app.route("/workLog/create", methods=["POST"])
+def workLog():
+    data = request.json
+    # data = jsonify(data)
+    print("recieved data ", data['time'])
+    print(type(data))
+    service.addWorkLog(data)
+    return data
+
+@app.route("/create/employee", methods=["POST"])
+def createEmployee():
+    # create employee at Posgres
+    res = request.json
+    
+    # create employee at mongoDb
+@app.route("/monitor/current", methods=["GET"])
+def getCurrent():
+    return {"username" : "luong","password" : "luong", "firstname" : "luong","email" : "lu@gmail.com"}
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    # set refresh token to null
+    return "ok"
+
+@app.route("/turnIn", methods=["POST"])
+def turnIn():
+    token = request.headers.get("X-Auth-Token") 
+    auth = jwt.decode(token,app.config['SECRET_KEY'])
+    imageBase64 = request.json
+    print(auth)
+    print(type(auth))
+    service.check_and_add_work_log(auth, imageBase64)
+    return "ok"
+    # service.turnIn()
 if __name__ == "__main__" :
     app.run()

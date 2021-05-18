@@ -59,3 +59,14 @@ add column roleId bigint
 alter table monitor add constraint monitor_role_pk foreign key (roleId) references role(id)
 
 alter table employee add constraint employee_role_pk foreign key (roleId) references role(id)
+
+-- 15-4 :  alter table workLog add column imageBase64 
+
+alter table workLog 
+add column userImage text
+
+-- 14-5 : alter table
+alter table employee add column monitorId bigserial not null 
+alter table employee add constraint monitorCreateEmployee
+foreign key(monitorId)  references monitor(id)
+alter table worklog add column daywork date 
