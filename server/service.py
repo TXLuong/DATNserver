@@ -53,21 +53,35 @@ class MonitorService:
                 print("Database connection os close successful") 
     def findUserByEmail(self, email):
         try:
-            # find user by email address
+            # find user by email address in monitor table 
             cursor = self.connection.cursor()
-            postgres_select_query = """ SELECT * FROM "monitor" WHERE email = %s"""
+            postgres_select_query_monitor = """ SELECT * FROM "monitor" WHERE email = %s"""
             print("asca")
-            cursor.execute(postgres_select_query,(email,))
+            cursor.execute(postgres_select_query_monitor,(email,))
             self.connection.commit()
             data = cursor.fetchall()
-            if len(data) == 0 : 
-                return "error"
-            print("User nhan duoc khi truy van voi email la : ", data)
-            print(type(data))
-            return data[0]
-    
+            if data != None and len(data) > 0 : 
+                print("User nhan duoc khi truy van voi email la : ", data)
+                print(type(data))
+                return data[0]
+            
+            # find user by email address in employee table
+            print("find user by email address in employee table") 
+            postgres_select_query_employee = """ SELECT * FROM "employee" WHERE email = %s """
+            cursor.execute(postgres_select_query_employee, (email,))
+            self.connection.commit()
+            data = cursor.fetchall()
+            if data != None or len(data) > 0 : 
+                print("User nhan duoc khi truy van voi email la : ", data)
+                print(type(data))
+                return data[0]
+            print("done find user by email address in employee table")
+            return "error"
+
+
+            # find user by email address in table employee
         except (Exception, psycopg2.Error)  as error :
-            print("Failed to insert record into mobile table", error)
+            print("Failed to query table", error)
         finally : 
             pass
             # closeing database connection 
@@ -75,10 +89,14 @@ class MonitorService:
             #     cursor.close()
             #     self.connection.close()
             #     print("Database connection os close successful") 
-    def checkLogin(self, email, password):
+    def checkLogin(self, email, password, ):
         data = self.findUserByEmail(email)
-        print("Loai cua data tra ve la : ", type(data))
-        return data[2] == password[1:], "me"
+        print("Loai cua data tra ve la : ", type(data)) 
+        if data != None and len(data) > 0:
+            roleid = str(data[-1])
+            print(data[2] + "--------------" + password[1:])
+            return data[2] == password[1:], roleid
+        return None, None
     def addWorkLog(self, data):
         try:
             sqlQuery = """INSERT INTO "worklog"("time", "employeeid", "monitorid", "userimage") VALUES(%s, %s, %s, %s)"""
@@ -135,7 +153,8 @@ class MonitorService:
         finally : 
             print("close success")
             self.connection.close()
-        
+    def addFace(data):
+        pass
         # if worklog for today exist, just add 5 minutes to time column
         # select workLog for today of user with email auth['user]
 

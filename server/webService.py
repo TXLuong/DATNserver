@@ -14,6 +14,7 @@ CORS(app, resources=r'/login')
 CORS(app, resources=r'/monitor/current')
 CORS(app, resources=r'/logout')
 CORS(app, resources=r'/turnIn')
+CORS(app, resources=r'/addFace')
 # CORS(app, resources=r'/getCurent')
 app.config['SECRET_KEY'] ='thisisthesecretkey'
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -77,11 +78,12 @@ def login():
     res = transform.decode("UTF-8")
     arr = res.split(":")
     auth = {"email" : arr[0], "password" : arr[1]}
-    check, userInfo = service.checkLogin(auth['email'], auth['password'])
+    check, roleid = service.checkLogin(auth['email'], auth['password'])
+    print("display roleid : ", roleid)
     if auth and check :
         # verify who user is 
         token = jwt.encode({'user': auth['email'], 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=60*12)}, app.config['SECRET_KEY'])
-        return jsonify({"token": token.decode('UTF-8'),"userInfo" : userInfo})
+        return jsonify({"token": token.decode('UTF-8'),"roleid" : roleid})
     return make_response('Could not verify', 401, {'WWW-Authenticate' : 'Basic realm = "Login required "'})
 
 
@@ -119,5 +121,12 @@ def turnIn():
     service.check_and_add_work_log(auth, imageBase64)
     return "ok"
     # service.turnIn()
+
+@app.route("/addFace", methods=["POST"])
+def addFace():
+    res = request.json
+    print(res.infor)
+    return "ok"
+    pass
 if __name__ == "__main__" :
     app.run()
